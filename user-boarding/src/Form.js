@@ -2,16 +2,13 @@ import * as yup from 'yup'
 import {useState, useEffect} from 'react'
 import axios from 'axios'
 import styled from 'styled-components'
+import Users from './Users'
 
 const WarningP = styled.p`
     color: red;
-    font-size: 2vw;
+    font-size: 1.5vw;
 `
 
-const Users = styled.div`
-    border: 1px solid blue;
-    margin-top:5vw;
-`
 
 
 const schema = yup.object().shape({
@@ -19,7 +16,8 @@ const schema = yup.object().shape({
     last_name: yup.string().required('Name is required.').min(2, 'You don\'t have at least 2 letters for a last name?'),
     email: yup.string().email().required('Email is required'),
     password: yup.string().min(6, 'Password needs to be at least 6 characters.'),
-    TOS: yup.boolean().oneOf([true], 'You must sign away your soul.').required()
+    TOS: yup.boolean().oneOf([true],'You must sign away your soul Casey.'),
+    role: yup.string().oneOf(['Engineer','Teacher','Student'], 'You must decide a role.')
 })
 
 export default function(){
@@ -29,6 +27,7 @@ export default function(){
         email: '',
         password: '',
         TOS: false,
+        role: ''
     }
 
     const [form, setForm] = useState([]) //static form
@@ -39,7 +38,9 @@ export default function(){
         email: '',
         password: '',
         TOS: '',
+        role: ''
     })
+    const [disabled, setDisabled] = useState(false)
 
     const validate = (name, value) =>{
         yup.reach(schema, name).validate(value)
@@ -65,9 +66,13 @@ export default function(){
             last_name: entry.last_name.trim(),
             email: entry.email.trim(),
             password: entry.password.trim(),
-            TOS: entry.TOS
+            TOS: entry.TOS,
+            role: entry.role
         } 
-        axios.post('https://reqres.in/api/users',newForm)
+        if(errors.first_name || errors.last_name || errors.email || errors.password || errors.TOS || errors.role){
+            alert('Please re-enter the information')
+        }else{
+            axios.post('https://reqres.in/api/users',newForm)
             .then(res => {
                 console.log('sent')
                 setForm([...form, newForm])
@@ -76,8 +81,15 @@ export default function(){
             .catch(err =>{
                 console.log('oops')
             })
-
+        }
     }
+
+    useEffect(()=>{
+        schema.isValid(entry)
+            .then(res=>{
+                setDisabled(!res)
+            })
+    },[entry])
 
     return(
         <div>
@@ -100,15 +112,17 @@ export default function(){
                 <label for='TOS'/>Terms of Service
                 <input onChange = {onChange} id ='TOS' type='checkbox' name ='TOS' checked = {entry.TOS}/>
                 <WarningP>{errors.TOS}</WarningP>
-                <input type='submit'/>
+                <label for='select'/>Role
+                <select id = 'select' name = 'role' onChange={onChange}>
+                    <option value = '0'>--Select a role--</option>
+                    <option value='Engineer'>Engineer</option>
+                    <option value='Teacher'>Teacher</option>
+                    <option value='Student'>Student</option>
+                </select> 
+                <button disabled={disabled} type='submit'>Submit</button>
+                <WarningP>{errors.role}</WarningP>
             </form>
-            <Users>Current Users
-                {form.map(a=>{
-                    return <div>
-                                <p>{a.first_name + ' ' + a.last_name} {a.email} {a.password} {a.TOS ? 'True' : 'False'}</p>
-                           </div>
-                })}
-            </Users>
+            <Users form = {form}/>
         </div>
     )
 }
